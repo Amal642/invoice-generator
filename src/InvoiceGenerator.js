@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { fetchImages } from "./firebase";
+import { fetchImages, uploadImageToStorage, saveImageToFirestore } from "./firebase";
 
 const InvoiceGenerator = () => {
   const [invoiceData, setInvoiceData] = useState({
@@ -13,6 +13,9 @@ const InvoiceGenerator = () => {
     totalAmount: "",
   });
   const [localImages, setLocalImages] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageName, setImageName] = useState("");
+  const [uploadStatus, setUploadStatus] = useState(null); // For alert box
 
   useEffect(() => {
     const getImages = async () => {
@@ -21,6 +24,36 @@ const InvoiceGenerator = () => {
     };
     getImages();
   }, []);
+
+  const handleImageUpload = async () => {
+    if (selectedImage && imageName) {
+      try {
+        // Upload to Firebase Storage
+        const imagePath = `images/${selectedImage.name}`;
+        await uploadImageToStorage(imagePath, selectedImage);
+
+        // Save to Firestore
+        await saveImageToFirestore({
+          name: imageName,
+          path: imagePath,
+        });
+
+        setUploadStatus({ success: true, message: "Image uploaded successfully!" });
+        alert("Image uploaded successfully!"); // Alert on success
+      } catch (error) {
+        setUploadStatus({ success: false, message: "Failed to upload image." });
+        alert("Failed to upload image."); // Alert on failure
+        console.error("Error uploading image:", error);
+      }
+    } else {
+      alert("Please select an image and enter a name."); // Alert for missing fields
+      setUploadStatus({ success: false, message: "Please select an image and enter a name." });
+    }
+  };
+
+  const handleImageSelection = (e) => {
+    setSelectedImage(e.target.files[0]);
+  };
 
   const handleItemChange = async (index, key, value) => {
     const newItems = [...invoiceData.items];
@@ -120,8 +153,6 @@ const InvoiceGenerator = () => {
   
     // Render the table
     doc.autoTable(options);
-
-    
   
     // Check the Y position after the table is rendered
     const finalY = doc.lastAutoTable.finalY;
@@ -151,13 +182,10 @@ const InvoiceGenerator = () => {
     const footerImage = await getBase64("/images/footer.png");
     doc.addImage(footerImage, "PNG", 10, doc.internal.pageSize.height - 60, 190, 50);
   
-    
-  
     // Download the PDF
     doc.save(`invoice_${invoiceData.invoiceNumber}.pdf`);
   };
   
-
   const getBase64 = (url) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -305,6 +333,41 @@ const InvoiceGenerator = () => {
       >
         Generate PDF
       </button>
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold">Upload Image</h3>
+        <div className="mt-4 space-y-2">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelection}
+            className="block w-full p-2 border rounded"
+          />
+          <input
+            type="text"
+            placeholder="Enter Image Name"
+            value={imageName}
+            onChange={(e) => setImageName(e.target.value)}
+            className="block w-full p-2 border rounded"
+          />
+          <button
+            type="button"
+            className="bg-green-500 text-white py-2 px-4 rounded"
+            onClick={handleImageUpload}
+          >
+            Submit
+          </button>
+        </div>
+
+        {uploadStatus && (
+          <div
+            className={`mt-4 p-4 rounded ${
+              uploadStatus.success ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
+            }`}
+          >
+            {uploadStatus.message}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
