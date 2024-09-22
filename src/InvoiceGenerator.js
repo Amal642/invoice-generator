@@ -95,18 +95,23 @@ const InvoiceGenerator = () => {
         if (data.column.index === 1 && data.row.section === 'body') {
           const item = invoiceData.items[data.row.index];
           if (item && item.image) {
-            const imgWidth = 25; // Adjust this as needed
-            const imgHeight = 25; // Adjust this as needed
+            // Adjust the image size dynamically based on the cell size
+            let imgWidth = 25; // Default width
+            let imgHeight = 25; // Default height
+            const cellWidth = data.cell.width;
+            const cellHeight = data.cell.height;
+      
+            // If the cell width/height is smaller, scale down the image proportionally
+            if (cellWidth < imgWidth || cellHeight < imgHeight) {
+              const scalingFactor = Math.min(cellWidth / imgWidth, cellHeight / imgHeight);
+              imgWidth *= scalingFactor;
+              imgHeight *= scalingFactor;
+            }
+      
             const xPosition = data.cell.x + 2;
             const yPosition = data.cell.y + 2;
-            
-            // Check if the current cell can fit the image
-            if (data.cell.width >= imgWidth && data.cell.height >= imgHeight) {
-              doc.addImage(item.image, "PNG", xPosition, yPosition, imgWidth, imgHeight);
-            } else {
-              // Handle case where image doesn't fit (could skip drawing or implement custom logic)
-              console.warn("Image too large for current cell:", item.image);
-            }
+      
+            doc.addImage(item.image, "PNG", xPosition, yPosition, imgWidth, imgHeight);
           }
         }
       },
