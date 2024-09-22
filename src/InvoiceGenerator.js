@@ -47,11 +47,12 @@ const InvoiceGenerator = () => {
 
   const generatePDF = async () => {
     const doc = new jsPDF();
-
+  
     // Add Header Image
     const headerImage = await getBase64("/images/header.png");
     doc.addImage(headerImage, "PNG", 10, 10, 190, 40);
-
+  
+    // Format Date
     const formatDate = (dateString) => {
       const date = new Date(dateString);
       const day = String(date.getDate()).padStart(2, '0');
@@ -59,14 +60,13 @@ const InvoiceGenerator = () => {
       const year = date.getFullYear();
       return `${day}-${month}-${year}`;
     };
-    
+  
     // Add Title and Invoice Info
     doc.setFontSize(12);
     doc.text(`Customer Name: ${invoiceData.customerName}`, 14, 60);
     doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`, 14, 70);
-    // doc.text(`Date: ${invoiceData.date}`, 14, 80);
     doc.text(`Date: ${formatDate(invoiceData.date)}`, 14, 80);
-
+  
     // Prepare table rows without images
     const tableRows = invoiceData.items.map((item, index) => [
       index + 1,
@@ -87,89 +87,76 @@ const InvoiceGenerator = () => {
         fontSize: 10,
       },
       bodyStyles: {
-        minCellHeight: 30, // Increase height for rows
+        minCellHeight: 30, // Set row height
         halign: 'center',
         valign: 'middle',
       },
       didDrawCell: (data) => {
+        // Draw images in the "Image" column
         if (data.column.index === 1 && data.row.section === 'body') {
           const item = invoiceData.items[data.row.index];
           if (item && item.image) {
-            // Adjust the image size dynamically based on the cell size
             let imgWidth = 25; // Default width
             let imgHeight = 25; // Default height
             const cellWidth = data.cell.width;
             const cellHeight = data.cell.height;
-      
-            // If the cell width/height is smaller, scale down the image proportionally
+  
+            // Adjust image size to fit the cell
             if (cellWidth < imgWidth || cellHeight < imgHeight) {
               const scalingFactor = Math.min(cellWidth / imgWidth, cellHeight / imgHeight);
               imgWidth *= scalingFactor;
               imgHeight *= scalingFactor;
             }
-      
+  
             const xPosition = data.cell.x + 2;
             const yPosition = data.cell.y + 2;
-      
+  
+            // Add image in the cell
             doc.addImage(item.image, "PNG", xPosition, yPosition, imgWidth, imgHeight);
           }
         }
-      },
-      didDrawPage: (data) => {
-        // Draw the header manually to avoid repeating
-        doc.setFontSize(10);
-        // doc.text("Invoice", 14, 20);
-      },
+      }
     };
   
-    // Check if the content fits the page and render it
-    let pageHeight = doc.internal.pageSize.getHeight();
-    let totalHeight = 90 + (tableRows.length * options.bodyStyles.minCellHeight);
-  
-    if (totalHeight > pageHeight) {
-      // If it doesn't fit, split the items into multiple pages
-      doc.autoTable({
-        ...options,
-        didDrawCell: (data) => {
-          // Call the same didDrawCell logic to handle images
-          if (data.column.index === 1 && data.row.section === 'body') {
-            const item = invoiceData.items[data.row.index];
-            if (item && item.image) {
-              const imgWidth = 25; // Adjust width as needed
-              const imgHeight = 25; // Adjust height as needed
-              const xPosition = data.cell.x + 2;
-              const yPosition = data.cell.y + 2;
-              doc.addImage(item.image, "PNG", xPosition, yPosition, imgWidth, imgHeight);
-            }
-          }
-        },
-      });
-    } else {
-      // Render the table normally if it fits
-      doc.autoTable(options);
-    }
+    // Render the table
+    doc.autoTable(options);
 
+    
+  
+    // Check the Y position after the table is rendered
+    const finalY = doc.lastAutoTable.finalY;
+    const pageHeight = doc.internal.pageSize.height;
+  
     // Calculate total amount
     const totalAmount = Number(invoiceData.totalAmount) || invoiceData.items.reduce((acc, item) => acc + Number(item.amount || 0), 0);
     const padding = 2;
     doc.setFillColor(0, 100, 0);
     const boxWidth = 50;
     const boxHeight = 10 + padding * 2;
-    doc.rect(14, doc.lastAutoTable.finalY + 10, boxWidth, boxHeight, 'F');
+    doc.rect(14, finalY + 10, boxWidth, boxHeight, 'F');
     doc.setTextColor(255, 255, 255);
     const text = `Total Amount: ${totalAmount} AED`;
     const textWidth = doc.getTextWidth(text);
     const xPosition = 14 + (boxWidth - textWidth) / 2;
-    const yPosition = doc.lastAutoTable.finalY + 10 + padding + (boxHeight - padding * 2) / 2;
+    const yPosition = finalY + 10 + padding + (boxHeight - padding * 2) / 2;
     doc.text(text, xPosition, yPosition);
-
+    
+    // Ensure there is enough space for the footer image
+    if (finalY + 60 > pageHeight) {
+      // If not enough space, add a new page for the footer
+      doc.addPage();
+    }
+  
     // Add Footer Image
     const footerImage = await getBase64("/images/footer.png");
-    doc.addImage(footerImage, "PNG", 10, doc.lastAutoTable.finalY + 30, 190, 50);
-
+    doc.addImage(footerImage, "PNG", 10, doc.internal.pageSize.height - 60, 190, 50);
+  
+    
+  
     // Download the PDF
     doc.save(`invoice_${invoiceData.invoiceNumber}.pdf`);
   };
+  
 
   const getBase64 = (url) => {
     return new Promise((resolve, reject) => {
