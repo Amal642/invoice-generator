@@ -52,11 +52,20 @@ const InvoiceGenerator = () => {
     const headerImage = await getBase64("/images/header.png");
     doc.addImage(headerImage, "PNG", 10, 10, 190, 40);
 
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+    
     // Add Title and Invoice Info
     doc.setFontSize(12);
     doc.text(`Customer Name: ${invoiceData.customerName}`, 14, 60);
     doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`, 14, 70);
-    doc.text(`Date: ${invoiceData.date}`, 14, 80);
+    // doc.text(`Date: ${invoiceData.date}`, 14, 80);
+    doc.text(`Date: ${formatDate(invoiceData.date)}`, 14, 80);
 
     // Prepare table rows without images
     const tableRows = invoiceData.items.map((item, index) => [
@@ -64,11 +73,10 @@ const InvoiceGenerator = () => {
       "", // Placeholder for image
       item.description,
       item.quantity,
-      invoiceData.fullAmount ? "" : item.amount + " AED",
+      invoiceData.fullAmount ? "" : (item.amount ? item.amount + " AED" : "0 AED"),
     ]);
-
-    // Render the table
-    doc.autoTable({
+  
+    const options = {
       head: [["No", "Image", "Item Name & Description", "Quantity", "Amount"]],
       body: tableRows,
       startY: 90,
@@ -79,23 +87,62 @@ const InvoiceGenerator = () => {
         fontSize: 10,
       },
       bodyStyles: {
-        minCellHeight: 25,
+        minCellHeight: 30, // Increase height for rows
         halign: 'center',
         valign: 'middle',
       },
       didDrawCell: (data) => {
         if (data.column.index === 1 && data.row.section === 'body') {
           const item = invoiceData.items[data.row.index];
-          if (item.image) {
+          if (item && item.image) {
+            const imgWidth = 25; // Adjust this as needed
+            const imgHeight = 25; // Adjust this as needed
             const xPosition = data.cell.x + 2;
             const yPosition = data.cell.y + 2;
-            const cellHeight = data.cell.height - 4;
-            const cellWidth = data.cell.width - 4;
-            doc.addImage(item.image, "PNG", xPosition, yPosition, cellWidth, cellHeight);
+            
+            // Check if the current cell can fit the image
+            if (data.cell.width >= imgWidth && data.cell.height >= imgHeight) {
+              doc.addImage(item.image, "PNG", xPosition, yPosition, imgWidth, imgHeight);
+            } else {
+              // Handle case where image doesn't fit (could skip drawing or implement custom logic)
+              console.warn("Image too large for current cell:", item.image);
+            }
           }
         }
       },
-    });
+      didDrawPage: (data) => {
+        // Draw the header manually to avoid repeating
+        doc.setFontSize(10);
+        // doc.text("Invoice", 14, 20);
+      },
+    };
+  
+    // Check if the content fits the page and render it
+    let pageHeight = doc.internal.pageSize.getHeight();
+    let totalHeight = 90 + (tableRows.length * options.bodyStyles.minCellHeight);
+  
+    if (totalHeight > pageHeight) {
+      // If it doesn't fit, split the items into multiple pages
+      doc.autoTable({
+        ...options,
+        didDrawCell: (data) => {
+          // Call the same didDrawCell logic to handle images
+          if (data.column.index === 1 && data.row.section === 'body') {
+            const item = invoiceData.items[data.row.index];
+            if (item && item.image) {
+              const imgWidth = 25; // Adjust width as needed
+              const imgHeight = 25; // Adjust height as needed
+              const xPosition = data.cell.x + 2;
+              const yPosition = data.cell.y + 2;
+              doc.addImage(item.image, "PNG", xPosition, yPosition, imgWidth, imgHeight);
+            }
+          }
+        },
+      });
+    } else {
+      // Render the table normally if it fits
+      doc.autoTable(options);
+    }
 
     // Calculate total amount
     const totalAmount = Number(invoiceData.totalAmount) || invoiceData.items.reduce((acc, item) => acc + Number(item.amount || 0), 0);
