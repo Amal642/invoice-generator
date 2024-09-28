@@ -225,47 +225,51 @@ const InvoiceGenerator = () => {
     doc.autoTable(options);
 
     // Check the Y position after the table is rendered
-    const finalY = doc.lastAutoTable.finalY;
-    const pageHeight = doc.internal.pageSize.height;
+const finalY = doc.lastAutoTable.finalY;
+const pageHeight = doc.internal.pageSize.height;
 
-    // Calculate total amount
-    const totalAmount =
-      Number(invoiceData.totalAmount) ||
-      invoiceData.items.reduce(
-        (acc, item) => acc + Number(item.amount || 0),
-        0
-      );
-    const padding = 2;
-    doc.setFillColor(0, 100, 0);
-    const boxWidth = 50;
-    const boxXPosition = 140;
-    const boxHeight = 10 + padding * 2;
-    doc.rect(boxXPosition, finalY + 10, boxWidth, boxHeight, "F");
-    // doc.rect(14, finalY + 10, boxWidth, boxHeight, "F");
-    doc.setTextColor(255, 255, 255);
-    const text = `Total Amount: ${totalAmount} AED`;
-    const textWidth = doc.getTextWidth(text);
-    const xPosition = 14 + (boxWidth - textWidth) / 2;
-    const yPosition = finalY + 10 + padding + (boxHeight - padding * 2) / 2;
-    doc.text(text, boxXPosition + (boxWidth - textWidth) / 2, yPosition);
-    // doc.text(text, xPosition, yPosition);
+// Calculate total amount
+const totalAmount =
+  Number(invoiceData.totalAmount) ||
+  invoiceData.items.reduce(
+    (acc, item) => acc + Number(item.amount || 0),
+    0
+  );
+const padding = 2;
+doc.setFillColor(0, 100, 0);
+const boxWidth = 50;
+const boxXPosition = 140;
+const boxHeight = 10 + padding * 2;
+doc.rect(boxXPosition, finalY + 10, boxWidth, boxHeight, "F");
+doc.setTextColor(255, 255, 255);
+const text = `Total Amount: ${totalAmount} AED`;
+const textWidth = doc.getTextWidth(text);
+const xPosition = 14 + (boxWidth - textWidth) / 2;
+const yPosition = finalY + 10 + padding + (boxHeight - padding * 2) / 2;
+doc.text(text, boxXPosition + (boxWidth - textWidth) / 2, yPosition);
 
-    // Ensure there is enough space for the footer image
-    if (finalY + 60 > pageHeight) {
-      // If not enough space, add a new page for the footer
-      doc.addPage();
-    }
+// Footer positioning
+const footerImageHeight = 50; // Height of the footer image
+const marginBottom = 10; // Space between total amount and footer image
+let footerYPosition = finalY + boxHeight + marginBottom; // Place below total amount
 
-    // Add Footer Image
-    const footerImage = await getBase64("/imagesLocal/footer.png");
-    doc.addImage(
-      footerImage,
-      "PNG",
-      10,
-      doc.internal.pageSize.height - 60,
-      190,
-      50
-    );
+// Check if the footer fits on the current page
+if (footerYPosition + footerImageHeight > pageHeight) {
+  doc.addPage();
+  footerYPosition = 10; // Place at the top of the new page
+}
+
+// Add Footer Image
+const footerImage = await getBase64("/imagesLocal/footer.png");
+doc.addImage(
+  footerImage,
+  "PNG",
+  10, // X position (left margin)
+  footerYPosition, // Calculated Y position
+  190, // Width of the footer image
+  footerImageHeight // Height of the footer image
+);
+
 
     // Download the PDF
     doc.save(`invoice_${invoiceData.invoiceNumber}.pdf`);
