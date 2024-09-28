@@ -21,7 +21,7 @@ const storage = getStorage(app);
 
 // Function to fetch images from Firestore
 export const fetchImages = async () => {
-  const imagesCollection = collection(db, "images");
+  const imagesCollection = collection(db, "images/");
   const imageSnapshot = await getDocs(imagesCollection);
   return imageSnapshot.docs.map(doc => ({
     id: doc.id,
