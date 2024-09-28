@@ -239,13 +239,13 @@ const padding = 2;
 doc.setFillColor(0, 100, 0);
 const boxWidth = 50;
 const boxXPosition = 140;
-const boxHeight = 10 + padding * 2;
-doc.rect(boxXPosition, finalY + 10, boxWidth, boxHeight, "F");
+const boxHeight = 8 + padding * 2;
+doc.rect(boxXPosition, finalY+5 , boxWidth, boxHeight, "F");
 doc.setTextColor(255, 255, 255);
 const text = `Total Amount: ${totalAmount} AED`;
 const textWidth = doc.getTextWidth(text);
 const xPosition = 14 + (boxWidth - textWidth) / 2;
-const yPosition = finalY + 10 + padding + (boxHeight - padding * 2) / 2;
+const yPosition = finalY+6 + padding + (boxHeight - padding * 2) / 2;
 doc.text(text, boxXPosition + (boxWidth - textWidth) / 2, yPosition);
 
 // Footer positioning
