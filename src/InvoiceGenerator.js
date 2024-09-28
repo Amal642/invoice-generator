@@ -251,30 +251,21 @@ const InvoiceGenerator = () => {
     // doc.text(text, xPosition, yPosition);
 
     // Ensure there is enough space for the footer image
-const footerImageHeight = 50; // Adjust this based on the footer image height
-const footerImageWidth = 190; // Adjust this based on the footer image width
-const marginBottom = 10; // Space between total box and footer image
+    if (finalY + 60 > pageHeight) {
+      // If not enough space, add a new page for the footer
+      doc.addPage();
+    }
 
-// Get the Y position of the total box (finalY represents the total box Y position)
-let footerYPosition = finalY + marginBottom;
-
-// If the footer image doesn't fit on the current page, add a new page
-if (footerYPosition + footerImageHeight > pageHeight) {
-  doc.addPage();
-  footerYPosition = marginBottom; // Start from the top of the new page
-}
-
-// Add Footer Image
-const footerImage = await getBase64("/imagesLocal/footer.png");
-doc.addImage(
-  footerImage,
-  "PNG",
-  10, // X position (left margin)
-  footerYPosition, // Y position calculated based on total box
-  footerImageWidth, // Width of the footer image
-  footerImageHeight // Height of the footer image
-);
-
+    // Add Footer Image
+    const footerImage = await getBase64("/imagesLocal/footer.png");
+    doc.addImage(
+      footerImage,
+      "PNG",
+      10,
+      doc.internal.pageSize.height - 60,
+      190,
+      50
+    );
 
     // Download the PDF
     doc.save(`invoice_${invoiceData.invoiceNumber}.pdf`);
