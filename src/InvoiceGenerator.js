@@ -126,9 +126,9 @@ const InvoiceGenerator = () => {
 
     // Add Title and Invoice Info
     doc.setFontSize(12);
-    doc.text(`Customer Name: ${invoiceData.customerName}`, 14, 60);
-    doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`, 14, 70);
-    doc.text(`Date: ${formatDate(invoiceData.date)}`, 14, 80);
+    doc.text(`Customer Name: ${invoiceData.customerName}`, 14, 70);
+    doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`, 14, 60);
+    doc.text(`Date: ${formatDate(invoiceData.date)}`, 160, 60);
 
     // Add comments in red color
     if (invoiceData.comments) {
@@ -142,7 +142,7 @@ const InvoiceGenerator = () => {
       const lines = doc.splitTextToSize(invoiceData.comments, pageWidth);
 
       // Set the starting Y position for the text
-      let startY = 87; // Adjust this as needed
+      let startY = 80; // Adjust this as needed
 
       // Add each line of the comments to the PDF
       lines.forEach((line, index) => {
@@ -166,7 +166,7 @@ const InvoiceGenerator = () => {
     const options = {
       head: [["No", "Image", "Item Name & Description", "Quantity", "Amount"]],
       body: tableRows,
-      startY: 98,
+      startY: 90,
       headStyles: {
         fillColor: [0, 100, 0],
         halign: "center",
