@@ -183,24 +183,30 @@ const InvoiceGenerator = () => {
         if (data.column.index === 1 && data.row.section === "body") {
           const item = invoiceData.items[data.row.index];
           if (item && item.image) {
-            let imgWidth = 25; // Default width
-            let imgHeight = 25; // Default height
             const cellWidth = data.cell.width;
             const cellHeight = data.cell.height;
-
-            // Adjust image size to fit the cell
-            if (cellWidth < imgWidth || cellHeight < imgHeight) {
-              const scalingFactor = Math.min(
-                cellWidth / imgWidth,
-                cellHeight / imgHeight
-              );
-              imgWidth *= scalingFactor;
-              imgHeight *= scalingFactor;
+      
+            let imgWidth = 25; // Original image width
+            let imgHeight = 25; // Original image height
+            
+            // Calculate aspect ratio of the image
+            const aspectRatio = imgWidth / imgHeight;
+      
+            // Adjust image size to fit inside the cell while maintaining the aspect ratio
+            if (imgWidth > cellWidth || imgHeight > cellHeight) {
+              // Adjust image size proportionally to fit the cell
+              if (cellWidth / cellHeight > aspectRatio) {
+                imgHeight = cellHeight - 4; // Add some padding
+                imgWidth = imgHeight * aspectRatio;
+              } else {
+                imgWidth = cellWidth - 4; // Add some padding
+                imgHeight = imgWidth / aspectRatio;
+              }
             }
-
-            const xPosition = data.cell.x + 2;
-            const yPosition = data.cell.y + 2;
-
+      
+            const xPosition = data.cell.x + (cellWidth - imgWidth) / 2; // Center the image horizontally
+            const yPosition = data.cell.y + (cellHeight - imgHeight) / 2; // Center the image vertically
+      
             // Add image in the cell
             doc.addImage(
               item.image,
@@ -212,7 +218,7 @@ const InvoiceGenerator = () => {
             );
           }
         }
-      },
+      },      
     };
 
     // Render the table
