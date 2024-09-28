@@ -17,8 +17,9 @@ const InvoiceGenerator = () => {
     ],
     fullAmount: true,
     totalAmount: "",
+    comments: "", // Initialize comments state
   });
-  const [localImages, setLocalImages] = useState([]);
+  const [images, setImages] = useState([]); // Store images fetched from Firestore
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageName, setImageName] = useState("");
   const [uploadStatus, setUploadStatus] = useState(null); // For alert box
@@ -26,11 +27,11 @@ const InvoiceGenerator = () => {
 
   useEffect(() => {
     const getImages = async () => {
-      const images = await fetchImages();
-      setLocalImages(images);
+      const imagesData = await fetchImages(); // This should return an array of image objects from Firestore
+      setImages(imagesData);
     };
     getImages();
-  }, []);
+  }, []); 
 
   const sanitizeFileName = (fileName) => {
     return fileName
@@ -42,37 +43,41 @@ const InvoiceGenerator = () => {
     if (selectedImage && imageName) {
       setIsLoading(true); // Start loading
       try {
-        // Upload to Firebase Storage
-        const imagePath = `images/${sanitizeFileName(selectedImage.name)}`;
-        await uploadImageToStorage(imagePath, selectedImage);
-
-        // Save to Firestore
-        await saveImageToFirestore({
+        // Generate the file path (e.g., "images/imageName.png")
+        const filePath = `images/${sanitizeFileName(imageName)}`;
+  
+        // Upload the image to Firebase Storage and get the public URL
+        const imageUrl = await uploadImageToStorage(filePath, selectedImage);
+  
+        // Prepare the data to be saved in Firestore (e.g., image URL and name)
+        const imageData = {
           name: imageName,
-          path: imagePath,
-        });
-
+          path: imageUrl,
+        };
+  
+        // Save the image details to Firestore
+        await saveImageToFirestore(imageData);
+  
         setUploadStatus({
           success: true,
-          message: "Image uploaded successfully!",
+          message: "Image uploaded and saved successfully!",
         });
         alert("Image uploaded successfully!"); // Alert on success
-        setIsLoading(false);
       } catch (error) {
-        setUploadStatus({ success: false, message: "Failed to upload image." });
+        setUploadStatus({
+          success: false,
+          message: "Failed to upload image.",
+        });
         alert("Failed to upload image."); // Alert on failure
-        setIsLoading(false);
         console.error("Error uploading image:", error);
+      } finally {
+        setIsLoading(false); // Stop loading
       }
     } else {
       alert("Please select an image and enter a name."); // Alert for missing fields
-      setUploadStatus({
-        success: false,
-        message: "Please select an image and enter a name.",
-      });
     }
   };
-
+  
   const handleImageSelection = (e) => {
     setSelectedImage(e.target.files[0]);
   };
@@ -83,7 +88,7 @@ const InvoiceGenerator = () => {
 
     // Load image if it's the 'imageName' being changed
     if (key === "imageName" && value) {
-      const selectedImage = localImages.find((img) => img.name === value);
+      const selectedImage = images.find((img) => img.name === value);
       if (selectedImage) {
         const imgBase64 = await getBase64(selectedImage.path);
         newItems[index].image = imgBase64; // Store the Base64 data in the item
@@ -364,28 +369,15 @@ const InvoiceGenerator = () => {
               />
               <select
                 className="block w-full mt-1 p-2 border rounded"
-                onChange={(e) => {
-                  const selectedImage = localImages.find(
-                    (img) => img.name === e.target.value
-                  );
-                  handleItemChange(
-                    index,
-                    "image",
-                    selectedImage ? selectedImage.path : ""
-                  );
-                  handleItemChange(
-                    index,
-                    "imageName",
-                    selectedImage ? selectedImage.name : ""
-                  );
-                }}
-              >
-                <option value="">Select Image</option>
-                {localImages.map((img, idx) => (
-                  <option key={idx} value={img.name}>
-                    {img.name}
-                  </option>
-                ))}
+                value={item.imageName}
+            onChange={(e) => handleItemChange(index, "imageName", e.target.value)}
+          >
+            <option value="">Select Image</option>
+            {images.map((img, idx) => (
+              <option key={idx} value={img.name}>
+                {img.name}
+              </option>
+            ))}
               </select>
               {!invoiceData.fullAmount && (
                 <input
